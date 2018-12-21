@@ -6,6 +6,12 @@
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/index
 #
+# Self-hosted agents for Windows 10 and Insider Preview are used:
+# - 'Hosted Windows Client' is the latest Windows 10
+# - 'Hosted Windows Client Next' is Windows 10 Insider Preview
+# Documention for the setup of these agents:
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/v2-windows
+#
 # In addition to this configuration file, the "Build pull requests from forks
 # of this repository" setting must also be enabled in the Azure DevOps project:
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/repos/github#validate-contributions-from-forks
@@ -121,3 +127,36 @@ jobs:
   - template: tools/ci/azure/tox_pytest.yml
     parameters:
       directory: tools/wpt/
+
+- job: infrastructure_win10_next
+  displayName: 'infrastructure/ tests (Windows 10 Insider Preview)'
+  #dependsOn: decision
+  #condition: dependencies.decision.outputs['test_jobs.wptrunner_infrastructure']
+  pool:
+    name: 'Hosted Windows Client Next'
+  steps:
+  - template: tools/ci/azure/system_info.yml
+  - template: tools/ci/azure/checkout.yml
+  - template: tools/ci/azure/install_python.yml
+  - template: tools/ci/azure/pip_install.yml
+    parameters:
+      packages: virtualenv
+  - template: tools/ci/azure/install_certs.yml
+  - template: tools/ci/azure/update_hosts.yml
+  - template: tools/ci/azure/update_manifest.yml
+  - script: python ./wpt run --yes --no-manifest-update --install-fonts --manifest MANIFEST.json --metadata infrastructure/metadata/ --log-tbpl $(Build.ArtifactStagingDirectory)/edge.tbpl.log --log-tbpl-level info edge_webdriver infrastructure/
+    displayName: 'Run tests (Edge)'
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish results'
+    inputs:
+      artifactName: 'infrastructure'
+    condition: succeededOrFailed()
+  - powershell: |
+      $hostFile = "$env:systemroot\System32\drivers\etc\hosts"
+      Copy-Item -Path "$hostFile.back" -Destination $hostFile -Force
+      taskkill /f /im MicrosoftEdge*
+      taskkill /f /im MicrosoftWebDriver.exe
+    displayName: 'Restore hosts file and cleanup test machine'
+    condition: always()
+    errorActionPreference: silentlyContinue
+    ignoreLASTEXITCODE: true
