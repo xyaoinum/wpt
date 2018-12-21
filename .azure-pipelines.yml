@@ -16,13 +16,12 @@
 # of this repository" setting must also be enabled in the Azure DevOps project:
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/repos/github#validate-contributions-from-forks
 
-trigger: none # disable builds for branches
-
 jobs:
 # The affected tests jobs are unconditional for speed, as most PRs have one or
 # more affected tests: https://github.com/web-platform-tests/wpt/issues/13936.
 - job: affected_macOS
   displayName: 'affected tests (Safari Technology Preview)'
+  condition: eq(variables['Build.Reason'], 'PullRequest')
   pool:
     vmImage: 'macOS-10.13'
   steps:
@@ -32,6 +31,7 @@ jobs:
 
 - job: affected_without_changes_macOS
   displayName: 'affected tests without changes (Safari Technology Preview)'
+  condition: eq(variables['Build.Reason'], 'PullRequest')
   pool:
     vmImage: 'macOS-10.13'
   steps:
@@ -45,6 +45,7 @@ jobs:
 # and all following jobs wait for it to finish and depend on its output.
 - job: decision
   displayName: './wpt test-jobs'
+  condition: eq(variables['Build.Reason'], 'PullRequest')
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
@@ -130,8 +131,8 @@ jobs:
 
 - job: infrastructure_win10_next
   displayName: 'infrastructure/ tests (Windows 10 Insider Preview)'
-  #dependsOn: decision
-  #condition: dependencies.decision.outputs['test_jobs.wptrunner_infrastructure']
+  dependsOn: decision
+  condition: dependencies.decision.outputs['test_jobs.wptrunner_infrastructure']
   pool:
     name: 'Hosted Windows Client Next'
   steps:
@@ -150,6 +151,47 @@ jobs:
     displayName: 'Publish results'
     inputs:
       artifactName: 'infrastructure'
+    condition: succeededOrFailed()
+  - powershell: |
+      $hostFile = "$env:systemroot\System32\drivers\etc\hosts"
+      Copy-Item -Path "$hostFile.back" -Destination $hostFile -Force
+      taskkill /f /im MicrosoftEdge*
+      taskkill /f /im MicrosoftWebDriver.exe
+    displayName: 'Restore hosts file and cleanup test machine'
+    condition: always()
+    errorActionPreference: silentlyContinue
+    ignoreLASTEXITCODE: true
+
+- job: all_win10_next
+  displayName: 'all tests (Windows 10 Insider Preview)'
+  # TODO: trigger using epochs/daily
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/foolip/azure-full-edge')
+  strategy:
+    matrix:
+      reftest1: { testType: reftest, thisChunk: 1, totalChunks: 1000 }
+      #reftest2: { testType: reftest, thisChunk: 2, totalChunks: 2 }
+      testharness1: { testType: testharness, thisChunk: 1, totalChunks: 1000 }
+      #testharness2: { testType: testharness, thisChunk: 2, totalChunks: 2 }
+      wdspec: { testType: wdspec, thisChunk: 1, totalChunks: 1 }
+  timeoutInMinutes: 360
+  pool:
+    name: 'Hosted Windows Client Next'
+  steps:
+  - template: tools/ci/azure/system_info.yml
+  - template: tools/ci/azure/checkout.yml
+  - template: tools/ci/azure/install_python.yml
+  - template: tools/ci/azure/pip_install.yml
+    parameters:
+      packages: virtualenv
+  - template: tools/ci/azure/install_certs.yml
+  - template: tools/ci/azure/update_hosts.yml
+  - template: tools/ci/azure/update_manifest.yml
+  - script: python ./wpt run --no-manifest-update --no-fail-on-unexpected --install-fonts --test-type=$(testType) --this-chunk=$(thisChunk) --total-chunks=$(totalChunks) --log-wptreport $(Build.ArtifactStagingDirectory)/wpt_report_$(testType)_$(thisChunk).json edge_webdriver
+    displayName: 'Run tests'
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish results'
+    inputs:
+      artifactName: 'results'
     condition: succeededOrFailed()
   - powershell: |
       $hostFile = "$env:systemroot\System32\drivers\etc\hosts"
