@@ -1,5 +1,6 @@
 #!/bin/sh
 
+sxg_version=1b3
 certfile=127.0.0.1.sxg.pem
 keyfile=127.0.0.1.sxg.key
 inner_url_origin=https://127.0.0.1:8444
@@ -25,7 +26,7 @@ gen-certurl -pem $certfile -ocsp $tmpdir/ocsp > $certfile.cbor
 
 # A valid Signed Exchange.
 gen-signedexchange \
-  -version 1b2 \
+  -version $sxg_version \
   -uri $inner_url_origin/signed-exchange/resources/inner-url.html \
   -status 200 \
   -content sxg-location.html \
@@ -40,7 +41,7 @@ gen-signedexchange \
 
 # For check-cert-request.tentative.html
 gen-signedexchange \
-  -version 1b2 \
+  -version $sxg_version \
   -uri $inner_url_origin/signed-exchange/resources/inner-url.html \
   -status 200 \
   -content sxg-location.html \
@@ -55,7 +56,7 @@ gen-signedexchange \
 
 # Request method is HEAD.
 gen-signedexchange \
-  -version 1b2 \
+  -version $sxg_version \
   -method HEAD \
   -uri $inner_url_origin/signed-exchange/resources/inner-url.html \
   -status 200 \
@@ -71,7 +72,7 @@ gen-signedexchange \
 
 # validityUrl is different origin from request URL.
 gen-signedexchange \
-  -version 1b2 \
+  -version $sxg_version \
   -uri $inner_url_origin/signed-exchange/resources/inner-url.html \
   -status 200 \
   -content failure.html \
@@ -86,7 +87,7 @@ gen-signedexchange \
 
 # certUrl is 404 and fallback URL is another signed exchange.
 gen-signedexchange \
-  -version 1b2 \
+  -version $sxg_version \
   -uri $inner_url_origin/signed-exchange/resources/sxg/sxg-location.sxg \
   -status 200 \
   -content failure.html \
@@ -101,7 +102,7 @@ gen-signedexchange \
 
 # Nested signed exchange.
 gen-signedexchange \
-  -version 1b2 \
+  -version $sxg_version \
   -uri "$inner_url_origin/signed-exchange/resources/inner-url.html?fallback-from-nested-sxg" \
   -status 200 \
   -content sxg/sxg-location.sxg \
@@ -117,7 +118,7 @@ gen-signedexchange \
 
 # Fallback URL has non-ASCII UTF-8 characters.
 gen-signedexchange \
-  -version 1b2 \
+  -version $sxg_version \
   -ignoreErrors \
   -uri "$inner_url_origin/signed-exchange/resources/🌐📦.html" \
   -status 200 \
@@ -133,7 +134,7 @@ gen-signedexchange \
 
 # Fallback URL has invalid UTF-8 sequence.
 gen-signedexchange \
-  -version 1b2 \
+  -version $sxg_version \
   -ignoreErrors \
   -uri "$inner_url_origin/signed-exchange/resources/$(echo -e '\xce\xce\xa9').html" \
   -status 200 \
@@ -149,7 +150,7 @@ gen-signedexchange \
 
 # Fallback URL has UTF-8 BOM.
 gen-signedexchange \
-  -version 1b2 \
+  -version $sxg_version \
   -ignoreErrors \
   -uri "$(echo -e '\xef\xbb\xbf')$inner_url_origin/signed-exchange/resources/inner-url.html" \
   -status 200 \
@@ -165,7 +166,7 @@ gen-signedexchange \
 
 # Response has Cache-Control: no-store header.
 gen-signedexchange \
-  -version 1b2 \
+  -version $sxg_version \
   -uri $inner_url_origin/signed-exchange/resources/inner-url.html \
   -status 200 \
   -responseHeader "Cache-Control: no-store" \
