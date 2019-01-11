@@ -237,13 +237,14 @@ promise_test(async testCase => {
   objectStore2.put({isbn:'two', title:'title2'});
   const addRequest2 = objectStore2.add({isbn:'one', title:'title2'});
   txn2.commit();
-  txn2.oncomplete = assert_unreached(
-    'Transaction with invalid "add" call should not be completed.');
+  txn2.oncomplete = () => { assert_unreached(
+    'Transaction with invalid "add" call should not be completed.'); };
 
   var addWatcher = requestWatcher(testCase, addRequest2);
   var txnWatcher = transactionWatcher(testCase, txn2);
   await Promise.all([addWatcher.wait_for('error'),
-                     txnWatcher.wait_for('error', 'abort')]);
+                     txnWatcher.wait_for('error')]);
+  await txnWatcher.wait_for('abort');
 
   // Read the data back to verify that txn2 was aborted.
   const txn3 = db.transaction(['books'], 'readonly');
