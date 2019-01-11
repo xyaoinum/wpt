@@ -8,15 +8,9 @@
       "supportsSession resolves when non-immersive options supported",
       (t) => {
       return XRTest.simulateDeviceConnection({ supportsImmersive:true })
-        .then( (controller) => { return navigator.xr.requestDevice() })
-        .then( (device) => {
-          // Non-immersive sessions without a outputContext should not be supported.
-          promise_rejects(t, 'NotSupportedError', device.supportsSession());
-
-          // Non-immersive sessions with an outputContext should be supported.
-          return device.supportsSession({
-              outputContext: getOutputContext()
-          });
+        .then( (controller) => {
+          // Non-immersive sessions should be supported.
+          return navigator.xr.supportsSessionMode('mode');
         });
     });
   </script>
