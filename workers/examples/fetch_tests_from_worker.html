@@ -1,0 +1,13 @@
+<!doctype html>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script>
+fetch_tests_from_worker(new Worker("fetch_tests_from_worker.js"));
+
+// If you want to test on SharedWorker,
+// fetch_tests_from_worker(new SharedWorker("fetch_tests_from_worker.js"));
+
+// See
+// https://github.com/web-platform-tests/wpt/blob/master/tools/serve/serve.py
+// for templates used in .any.js, e.g. when you want to test on ServiceWorker.
+</script>
