@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<body>
+<title>Violation Reports for "legacy-image-formats" policy</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="/feature-policy/experimental-features/resources/common.js"></script>
+<script>
+'use strict';
+
+const test_cases = [
+  {src: "/feature-policy/experimental-features/resources/foo.svg", accepted: true},
+  {src: "/feature-policy/experimental-features/resources/foo.jpg", accepted: true},
+  {src: "/feature-policy/experimental-features/resources/foo.png", accepted: true},
+  {src: "/feature-policy/experimental-features/resources/foo.gif", accepted: true},
+  {src: "/feature-policy/experimental-features/resources/foo.webp", accepted: true},
+  {src: "/feature-policy/experimental-features/resources/foo.tiff", accepted: false},
+  {src: "/feature-policy/experimental-features/resources/foo.bmp", accepted: false},
+];
+
+// Timeout duration in terms of number of RAFs.
+const kTimeoutInRafs = 2;
+
+// Returns a promise which is resolved after 10 RAFs or as soon as a violation
+// of 'legacy-image-formats' is observed.
+function violation_observer_with_timeout() {
+  return new Promise((r) => {
+    wait_for_violation_in_file(
+      "legacy-image-formats", false /* ignore file name */)
+      .then(r);
+
+    (function raf_count(n, callback) {
+      if (n-- === 0) {
+        callback();
+        // Manually reset this given that the callback is not expected to fire
+        // at all.
+        window.reporting_observer_callback = null;
+      } else {
+        window.requestAnimationFrame(
+          () => raf_count(n, callback));
+      }
+    })(kTimeoutInRafs, r);
+  });
+}
+
+// Violation reports for various image types.
+test_cases.forEach( (t) => {
+  promise_test(async() => {
+    const observer = violation_observer_with_timeout();
+    var img = document.createElement('IMG');
+    document.body.appendChild(img);
+    img.src = t.src;
+    await observer;
+  }, `Ensure ${t.accepted ? 'no ' : ''}violation report is generated for for image src=${t.src}.`);
+});
+</script>
+</body>
+
