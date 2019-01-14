@@ -5,6 +5,8 @@ def main(request, response):
     match = request.headers.get("If-None-Match", None)
     date = request.GET.first("date", "")
     modified = request.headers.get("If-Modified-Since", None)
+    response.headers.set("Access-Control-Allow-Origin", "*");
+    response.headers.set("Timing-Allow-Origin", "*");
     if tag:
         response.headers.set("ETag", '"%s"' % tag)
     elif date:
